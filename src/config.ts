@@ -14,8 +14,8 @@ function resolveWalletFile(): string {
 }
 
 export const config = {
-  /** Base URL of the gcp.sh proxy, e.g. https://gcp.sh */
-  proxyUrl: (process.env.PROXY_URL ?? "https://gcp.sh").replace(/\/$/, ""),
+  /** Base URL of the gcp.sh proxy. Defaults to the hosted deployment. */
+  proxyUrl: (process.env.PROXY_URL ?? "https://gcp-x402.vercel.app").replace(/\/$/, ""),
 
   /**
    * Optional explicit key (power users / CI). When unset, the server generates

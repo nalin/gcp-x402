@@ -73,7 +73,34 @@ cd proxy && vercel --prod
 
 ---
 
-## Part 2 — Install the agent client (MCP)
+## Part 2 — Give an agent access
+
+Two ways, same backend. The **skill** is the simplest and teaches the agent how to use
+it well; the **MCP server** exposes structured tools for MCP-native clients.
+
+### Option A — as a skill (simplest, Claude Code)
+
+Drop the skill into the agent's skills directory — that's the whole install:
+
+```bash
+mkdir -p ~/.claude/skills/bigquery-public-data
+curl -fsSL https://raw.githubusercontent.com/nalin/gcp-x402/master/skill/bigquery-public-data/SKILL.md \
+  -o ~/.claude/skills/bigquery-public-data/SKILL.md
+# (private repo: use `gh api` or copy the file from a local clone instead of curl)
+```
+
+The skill triggers whenever the user asks a data question a public dataset could answer.
+Under the hood it runs the same package as a CLI via `npx` — no separate install:
+
+```bash
+npx -y git+ssh://git@github.com/nalin/gcp-x402.git wallet            # show address + balance
+npx -y git+ssh://git@github.com/nalin/gcp-x402.git estimate "<sql>"  # price, no charge
+npx -y git+ssh://git@github.com/nalin/gcp-x402.git query "<sql>"     # run + pay, returns rows
+```
+
+The agent handles funding prompts, cost-checking, and SQL rules from the skill's context.
+
+### Option B — as an MCP server
 
 No clone, no build — `npx` pulls the server straight from GitHub and runs it. The repo
 is private, so installs use the SSH form (uses your existing GitHub SSH access).

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { estimate, query, listDatasets, walletInfo, walletAddress } from "./client.js";
 import { freshlyCreated } from "./wallet.js";
 import { config } from "./config.js";
+import { runCli } from "./cli.js";
 
 const server = new McpServer({
   name: "gcp-sh",
@@ -112,6 +113,13 @@ server.registerTool(
 );
 
 async function main() {
+  // Dual mode: with args, behave as a plain CLI (used by the skill over Bash);
+  // with no args, run as an MCP server over stdio (used by MCP clients).
+  const cliArgs = process.argv.slice(2);
+  if (cliArgs.length > 0) {
+    process.exit(await runCli(cliArgs));
+  }
+
   // Diagnostics go to stderr — stdout is the MCP transport.
   console.error(`gcp.sh MCP server — wallet ${walletAddress}, proxy ${config.proxyUrl}`);
   if (freshlyCreated) {
