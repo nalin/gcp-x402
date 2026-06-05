@@ -80,14 +80,33 @@ it well; the **MCP server** exposes structured tools for MCP-native clients.
 
 ### Option A — as a skill (simplest, Claude Code)
 
-Drop the skill into the agent's skills directory — that's the whole install:
+Drop the skill into the agent's skills directory — that's the whole install.
+
+**While the repo is private**, copy it from a local clone:
 
 ```bash
 mkdir -p ~/.claude/skills/bigquery-public-data
+cp skill/bigquery-public-data/SKILL.md ~/.claude/skills/bigquery-public-data/
+```
+
+…or pull it over the GitHub API (works for private repos, uses your `gh` auth):
+
+```bash
+mkdir -p ~/.claude/skills/bigquery-public-data && \
+gh api -H "Accept: application/vnd.github.raw" \
+  repos/nalin/gcp-x402/contents/skill/bigquery-public-data/SKILL.md \
+  > ~/.claude/skills/bigquery-public-data/SKILL.md
+```
+
+**Once the repo is public**, it's a one-line fetch from the raw URL:
+
+```bash
+mkdir -p ~/.claude/skills/bigquery-public-data && \
 curl -fsSL https://raw.githubusercontent.com/nalin/gcp-x402/master/skill/bigquery-public-data/SKILL.md \
   -o ~/.claude/skills/bigquery-public-data/SKILL.md
-# (private repo: use `gh api` or copy the file from a local clone instead of curl)
 ```
+
+Use `.claude/skills` instead of `~/.claude/skills` to scope it to one project.
 
 The skill triggers whenever the user asks a data question a public dataset could answer.
 Under the hood it runs the same package as a CLI via `npx` — no separate install:
