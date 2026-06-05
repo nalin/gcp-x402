@@ -38,6 +38,9 @@ gcloud secrets add-iam-policy-binding gcp-x402-quote-secret \
 ## Deploy (and redeploy)
 
 ```bash
+# Sync the skill into the image so GET /skill serves the current version.
+./scripts/sync-skill.sh
+
 cd proxy
 gcloud run deploy gcp-x402 \
   --source . \

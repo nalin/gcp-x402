@@ -92,7 +92,7 @@ machine-wide):
 
 ```bash
 mkdir -p .claude/skills/bigquery-public-data && \
-curl -fsSL https://raw.githubusercontent.com/nalin/gcp-x402/master/skill/bigquery-public-data/SKILL.md \
+curl -fsSL https://gcp-x402-975410367881.us-central1.run.app/skill \
   -o .claude/skills/bigquery-public-data/SKILL.md
 ```
 

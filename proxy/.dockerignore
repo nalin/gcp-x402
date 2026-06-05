@@ -8,3 +8,5 @@ Dockerfile
 .dockerignore
 npm-debug.log*
 *.md
+# ...but keep the served skill file
+!public/skill.md
