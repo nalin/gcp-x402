@@ -10,7 +10,7 @@ import { estimate, query, listDatasets, walletInfo } from "./client.js";
 const USAGE = `gcp-x402 — query BigQuery public datasets, paid per query in USDC (x402)
 
 Usage:
-  npx -y git+ssh://git@github.com/nalin/gcp-x402.git <command>
+  npx -y github:nalin/gcp-x402 <command>
 
 Commands:
   wallet                 Show this project's wallet address, USDC balance, and how to fund it.
