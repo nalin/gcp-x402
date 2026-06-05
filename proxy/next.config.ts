@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   // server bundle so its dynamic requires resolve at runtime.
   serverExternalPackages: ["@google-cloud/bigquery"],
   // Pin the tracing root to this app so a parent-dir lockfile doesn't mislead
-  // Vercel's dependency tracing.
+  // the deploy's dependency tracing.
   outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
 };
 

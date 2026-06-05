@@ -308,7 +308,7 @@
           <!-- PROXY -->
           <a href="#flow" class="diagram-node">
             <rect class="box" x="340" y="60" width="270" height="310" rx="12"/>
-            <text class="ttl" x="360" y="86" fill="#44443f">gcp-x402 proxy (Vercel)</text>
+            <text class="ttl" x="360" y="86" fill="#44443f">gcp-x402 proxy (Cloud Run)</text>
             <rect class="inner" x="360" y="98"  width="230" height="40" rx="7"/>
             <text class="lbl" x="372" y="123">1 · Dry-run → price</text>
             <rect class="inner" x="360" y="144" width="230" height="40" rx="7"/>
@@ -564,7 +564,7 @@ await bq.run(sql, { maximumBytesBilled: cap });   <span class="c">// fails free 
       <p class="sec-intro">One repository, three artifacts. The proxy is the backend; the client
         ships in two forms so any agent can use it.</p>
 
-      <h3>1 · The proxy <span class="small">(server — Next.js on Vercel)</span></h3>
+      <h3>1 · The proxy <span class="small">(server — Next.js on Cloud Run)</span></h3>
       <p>Holds the Google Cloud credentials and the receiving wallet. Exposes
         <code>POST /api/query</code> (the paid endpoint) and a free <code>GET /api/datasets</code>.
         This is the only component that touches BigQuery or the blockchain.</p>
@@ -624,7 +624,7 @@ curl -fsSL https://raw.githubusercontent.com/nalin/gcp-x402/master/skill/bigquer
 
       <h3>As an MCP server</h3>
 <pre>claude mcp add gcp-x402 \
-  --env PROXY_URL=https://gcp-x402.vercel.app \
+  --env PROXY_URL=https://gcp-x402-975410367881.us-central1.run.app \
   -- npx -y github:nalin/gcp-x402</pre>
       <p class="small">Both point at the same hosted proxy and the same per-project wallet.</p>
     </section>

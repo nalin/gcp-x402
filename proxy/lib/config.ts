@@ -26,7 +26,7 @@ export const config = {
   /** Billing project that runs the jobs (NOT the public-data project). */
   gcpProjectId: req("GCP_PROJECT_ID"),
   /**
-   * Service-account credentials as inline JSON (preferred on Vercel) — the
+   * Service-account credentials as inline JSON (for hosts without a GCP identity) — the
    * @google-cloud/bigquery client also honors GOOGLE_APPLICATION_CREDENTIALS
    * (a file path) when this is unset.
    */

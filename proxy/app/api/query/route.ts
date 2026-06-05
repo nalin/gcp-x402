@@ -43,7 +43,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing `sql` in request body." }, { status: 400 });
   }
 
-  const resource = new URL(req.url).toString();
+  // Behind a proxy/load balancer (Cloud Run), req.url carries the internal
+  // host (0.0.0.0:8080). Derive the public URL from the forwarded headers so the
+  // x402 `resource` is correct (works for the run.app host and custom domains).
+  const fwdHost = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const fwdProto = req.headers.get("x-forwarded-proto") ?? "https";
+  const resource = fwdHost ? `${fwdProto}://${fwdHost}/api/query` : new URL(req.url).toString();
 
   // --- price (dry run is the oracle for both calls) ------------------------
   let quote;

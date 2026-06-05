@@ -33,7 +33,7 @@ So the dry run is simultaneously our **pricing oracle** and our **safety oracle*
 
 ```
 ┌─────────────────────────┐         x402 (HTTP 402 + USDC on Base)        ┌──────────────────────────┐
-│  Agent                  │ ───────────────────────────────────────────► │  gcp-x402 proxy (Vercel)   │
+│  Agent                  │ ───────────────────────────────────────────► │  gcp-x402 proxy (Cloud Run)   │
 │  ┌───────────────────┐  │   POST /api/query  { sql }                    │                          │
 │  │ gcp-x402 MCP client │  │ ◄─── 402 + signed quote (bytes, price, exp) ─ │  1. dry-run  → bytes      │
 │  │  • viem wallet    │  │                                               │  2. allowlist tables      │
@@ -54,7 +54,7 @@ Two packages, both in this repo:
 
 | Package  | Role             | Runs where                    | Holds                                   |
 | -------- | ---------------- | ----------------------------- | --------------------------------------- |
-| `proxy/` | x402 **server**  | Vercel (Next.js, Node runtime)| GCP service-account creds, receiving wallet address, quote secret |
+| `proxy/` | x402 **server**  | Cloud Run (Next.js, Node runtime)| GCP service-account creds, receiving wallet address, quote secret |
 | `mcp/`   | x402 **client**  | Alongside the agent (stdio MCP)| The agent's funded USDC wallet (private key) |
 
 The agent installs the MCP server. Everything else — pricing, payment, BigQuery — is
@@ -112,7 +112,7 @@ Three independent layers stop it:
    authorizes exactly `maxAmountRequired`; if the body grew, the recomputed price no
    longer matches the authorized amount and the facilitator's `verify` rejects it.
    Because this is stateless (no server-side quote store), it scales trivially on
-   Vercel.
+   Cloud Run.
 2. **Signed quote (`qhash`).** The HMAC quote binds a price to `sha256(sql)` with a
    60s expiry. It's tamper-evident and lets the client confirm it's paying for the
    query it asked about. (Server enforcement is the re-dry-run; the token is the

@@ -23,7 +23,7 @@ agent ──POST /api/query──▶ proxy ──dry-run──▶ price ──40
 | Path      | What it is                                                                 |
 | --------- | ------------------------------------------------------------------------- |
 | `src/`    | The agent-side MCP server (repo root package). Holds the agent's USDC wallet, auto-pays. |
-| `proxy/`  | The x402 server (Next.js, deploy to Vercel). Holds GCP creds + receiving wallet. |
+| `proxy/`  | The x402 server (Next.js, deploy to Cloud Run). Holds GCP creds + receiving wallet. |
 
 The MCP client lives at the repo root so it installs in one line with
 `npx -y github:nalin/gcp-x402` — no clone, no build step.
@@ -35,8 +35,9 @@ The MCP client lives at the repo root so it installs in one line with
 ### Prerequisites
 
 1. **A GCP project with a billing account.** This pays Google for query compute.
-2. **A service account** in that project with **only** `roles/bigquery.jobUser`
-   (no data roles — the public datasets are world-readable). Download its JSON key.
+2. **A runtime service account** with **only** `roles/bigquery.jobUser` (no data roles —
+   public datasets are world-readable). On Cloud Run it's attached to the service — no key
+   to download; the [runbook](proxy/DEPLOY.md) creates it.
 3. **A receiving wallet** address (where query revenue lands).
 4. **A quote secret:** `openssl rand -base64 48`.
 
@@ -117,7 +118,7 @@ No clone, no build — `npx` pulls the server straight from the public GitHub re
 
 ```bash
 claude mcp add gcp-x402 \
-  --env PROXY_URL=https://gcp-x402.vercel.app \
+  --env PROXY_URL=https://gcp-x402-975410367881.us-central1.run.app \
   --env MAX_PAYMENT_USD=1.00 \
   -- npx -y github:nalin/gcp-x402
 ```
@@ -131,7 +132,7 @@ claude mcp add gcp-x402 \
       "command": "npx",
       "args": ["-y", "github:nalin/gcp-x402"],
       "env": {
-        "PROXY_URL": "https://gcp-x402.vercel.app",
+        "PROXY_URL": "https://gcp-x402-975410367881.us-central1.run.app",
         "MAX_PAYMENT_USD": "1.00"
       }
     }
