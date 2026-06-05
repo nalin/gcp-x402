@@ -12,6 +12,9 @@ account, runs your query, and charges you in USDC for exactly what it cost (plus
 margin), settled onchain via x402. The price for each query is computed from a BigQuery
 **dry run** before you pay — so it's a *dynamic* paywall, not a flat one.
 
+**Just want to use it?** See the [User Guide](docs/USER-GUIDE.md). TL;DR — tell your agent:
+*“install the skill at https://gcp-x402-975410367881.us-central1.run.app/skill”*.
+
 See [DESIGN.md](./DESIGN.md) for the full architecture and threat model.
 
 ```
