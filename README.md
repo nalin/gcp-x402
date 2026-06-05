@@ -80,33 +80,25 @@ it well; the **MCP server** exposes structured tools for MCP-native clients.
 
 ### Option A — as a skill (simplest, Claude Code)
 
-Drop the skill into the agent's skills directory — that's the whole install.
-
-**While the repo is private**, copy it from a local clone:
+Drop the skill into the **project's** skills directory — that's the whole install. Run
+this from the root of the project you want to enable (installs per-project, not
+machine-wide):
 
 ```bash
-mkdir -p ~/.claude/skills/bigquery-public-data
-cp skill/bigquery-public-data/SKILL.md ~/.claude/skills/bigquery-public-data/
+mkdir -p .claude/skills/bigquery-public-data && \
+cp /path/to/gcp-x402/skill/bigquery-public-data/SKILL.md .claude/skills/bigquery-public-data/
 ```
 
-…or pull it over the GitHub API (works for private repos, uses your `gh` auth):
+**Once the repo is public**, fetch it straight from the raw URL — still per-project:
 
 ```bash
-mkdir -p ~/.claude/skills/bigquery-public-data && \
-gh api -H "Accept: application/vnd.github.raw" \
-  repos/nalin/gcp-x402/contents/skill/bigquery-public-data/SKILL.md \
-  > ~/.claude/skills/bigquery-public-data/SKILL.md
-```
-
-**Once the repo is public**, it's a one-line fetch from the raw URL:
-
-```bash
-mkdir -p ~/.claude/skills/bigquery-public-data && \
+mkdir -p .claude/skills/bigquery-public-data && \
 curl -fsSL https://raw.githubusercontent.com/nalin/gcp-x402/master/skill/bigquery-public-data/SKILL.md \
-  -o ~/.claude/skills/bigquery-public-data/SKILL.md
+  -o .claude/skills/bigquery-public-data/SKILL.md
 ```
 
-Use `.claude/skills` instead of `~/.claude/skills` to scope it to one project.
+(Use `~/.claude/skills` instead of `.claude/skills` only if you deliberately want it
+available to every project on the machine.)
 
 The skill triggers whenever the user asks a data question a public dataset could answer.
 Under the hood it runs the same package as a CLI via `npx` — no separate install:
