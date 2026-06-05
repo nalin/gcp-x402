@@ -16,6 +16,14 @@ export default function Home() {
         An <strong>x402</strong> proxy for BigQuery public datasets. Query them
         from an agent with no Google Cloud account — pay per query in USDC.
       </p>
+      <p style={{ marginTop: "1rem" }}>
+        <a
+          href="/guide"
+          style={{ color: "#0f6e56", fontWeight: 600, textDecoration: "none" }}
+        >
+          → Read the user guide
+        </a>
+      </p>
 
       <h2 style={{ fontSize: "1rem", marginTop: "2rem" }}>How it works</h2>
       <ol style={{ color: "#333", paddingLeft: "1.2rem" }}>
