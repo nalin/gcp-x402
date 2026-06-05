@@ -86,13 +86,6 @@ machine-wide):
 
 ```bash
 mkdir -p .claude/skills/bigquery-public-data && \
-cp /path/to/gcp-x402/skill/bigquery-public-data/SKILL.md .claude/skills/bigquery-public-data/
-```
-
-**Once the repo is public**, fetch it straight from the raw URL — still per-project:
-
-```bash
-mkdir -p .claude/skills/bigquery-public-data && \
 curl -fsSL https://raw.githubusercontent.com/nalin/gcp-x402/master/skill/bigquery-public-data/SKILL.md \
   -o .claude/skills/bigquery-public-data/SKILL.md
 ```
@@ -104,17 +97,16 @@ The skill triggers whenever the user asks a data question a public dataset could
 Under the hood it runs the same package as a CLI via `npx` — no separate install:
 
 ```bash
-npx -y git+ssh://git@github.com/nalin/gcp-x402.git wallet            # show address + balance
-npx -y git+ssh://git@github.com/nalin/gcp-x402.git estimate "<sql>"  # price, no charge
-npx -y git+ssh://git@github.com/nalin/gcp-x402.git query "<sql>"     # run + pay, returns rows
+npx -y github:nalin/gcp-x402 wallet            # show address + balance
+npx -y github:nalin/gcp-x402 estimate "<sql>"  # price, no charge
+npx -y github:nalin/gcp-x402 query "<sql>"     # run + pay, returns rows
 ```
 
 The agent handles funding prompts, cost-checking, and SQL rules from the skill's context.
 
 ### Option B — as an MCP server
 
-No clone, no build — `npx` pulls the server straight from GitHub and runs it. The repo
-is private, so installs use the SSH form (uses your existing GitHub SSH access).
+No clone, no build — `npx` pulls the server straight from the public GitHub repo and runs it.
 
 **Claude Code** (one line):
 
@@ -122,7 +114,7 @@ is private, so installs use the SSH form (uses your existing GitHub SSH access).
 claude mcp add gcp-sh \
   --env PROXY_URL=https://gcp-x402.vercel.app \
   --env MAX_PAYMENT_USD=1.00 \
-  -- npx -y git+ssh://git@github.com/nalin/gcp-x402.git
+  -- npx -y github:nalin/gcp-x402
 ```
 
 **Claude Desktop / Cursor / any MCP client** — add to the `mcpServers` config block:
@@ -132,7 +124,7 @@ claude mcp add gcp-sh \
   "mcpServers": {
     "gcp-sh": {
       "command": "npx",
-      "args": ["-y", "git+ssh://git@github.com/nalin/gcp-x402.git"],
+      "args": ["-y", "github:nalin/gcp-x402"],
       "env": {
         "PROXY_URL": "https://gcp-x402.vercel.app",
         "MAX_PAYMENT_USD": "1.00"
@@ -141,8 +133,6 @@ claude mcp add gcp-sh \
   }
 }
 ```
-
-> Once the repo is public, the shorthand `npx -y github:nalin/gcp-x402` works too.
 
 The client **generates its own wallet on first run, per project** (saved to
 `./.gcp-sh/wallet.json` in the project, `chmod 600`, auto-`.gitignore`d) — no key to

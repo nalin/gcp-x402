@@ -25,7 +25,7 @@ Everything runs through one command (no install, no clone — `npx` fetches and
 caches it; the very first call builds for ~60s, then it's fast):
 
 ```
-npx -y git+ssh://git@github.com/nalin/gcp-x402.git <command>
+npx -y github:nalin/gcp-x402 <command>
 ```
 
 The first build prints npm deprecation warnings to stderr — harmless. To keep
@@ -39,7 +39,7 @@ is always on stdout; the warnings never mix into it.
 | `query "<sql>"` | Run a read-only query, auto-pay the USDC price, print the result rows. |
 | `datasets` | List popular public datasets + current pricing. |
 
-> Requires GitHub SSH access to the (private) `nalin/gcp-x402` repo.
+> Public package — `npx` needs no auth. Node 18+ required.
 
 ## First use: fund the wallet
 
@@ -93,7 +93,7 @@ and if it's more than a cent or two, confirm before running `query`.
 
 **Example — most common baby names in California:**
 ```
-npx -y git+ssh://git@github.com/nalin/gcp-x402.git query \
+npx -y github:nalin/gcp-x402 query \
   'SELECT name, SUM(number) AS total
    FROM `bigquery-public-data.usa_names.usa_1910_2013`
    WHERE state = "CA" GROUP BY name ORDER BY total DESC LIMIT 10'
@@ -101,13 +101,13 @@ npx -y git+ssh://git@github.com/nalin/gcp-x402.git query \
 
 **Example — price-check before a potentially big query:**
 ```
-npx -y git+ssh://git@github.com/nalin/gcp-x402.git estimate \
+npx -y github:nalin/gcp-x402 estimate \
   'SELECT `by`, score FROM `bigquery-public-data.hacker_news.full` WHERE type = "story"'
 ```
 
 **Example — check the wallet before starting:**
 ```
-npx -y git+ssh://git@github.com/nalin/gcp-x402.git wallet
+npx -y github:nalin/gcp-x402 wallet
 ```
 
 ## Notes
