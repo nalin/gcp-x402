@@ -1,4 +1,4 @@
-// Thin client over the gcp.sh proxy that handles x402 payment automatically.
+// Thin client over the gcp-x402 proxy that handles x402 payment automatically.
 //
 // `x402-fetch` does the heavy lifting: on a 402 it reads the PaymentRequirements,
 // signs an EIP-3009 USDC authorization with the agent's wallet, and retries.

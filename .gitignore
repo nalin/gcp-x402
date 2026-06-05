@@ -8,4 +8,4 @@ dist/
 .DS_Store
 .vercel
 *.log
-.gcp-sh/
+.gcp-x402/

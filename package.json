@@ -1,7 +1,7 @@
 {
   "name": "gcp-x402",
   "version": "0.1.0",
-  "description": "MCP server to query BigQuery public datasets via the gcp.sh x402 proxy",
+  "description": "MCP server to query BigQuery public datasets via the gcp-x402 x402 proxy",
   "type": "module",
   "bin": {
     "gcp-x402": "dist/index.js"

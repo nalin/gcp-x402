@@ -1,4 +1,4 @@
-# gcp.sh
+# gcp-x402
 
 **Query BigQuery public datasets from an agent that has no Google Cloud account —
 pay per query in USDC over [x402](https://x402.org).**
@@ -7,7 +7,7 @@ BigQuery hosts ~200 free public datasets, but to touch any of them you need a GC
 project *with a billing account*, because BigQuery bills query compute
 (~$6.25/TiB scanned) to whoever runs the job. An autonomous agent has neither.
 
-`gcp.sh` is a **metered reseller of BigQuery compute**. The proxy owns the GCP billing
+`gcp-x402` is a **metered reseller of BigQuery compute**. The proxy owns the GCP billing
 account, runs your query, and charges you in USDC for exactly what it cost (plus a
 margin), settled onchain via x402. The price for each query is computed from a BigQuery
 **dry run** before you pay — so it's a *dynamic* paywall, not a flat one.
@@ -111,7 +111,7 @@ No clone, no build — `npx` pulls the server straight from the public GitHub re
 **Claude Code** (one line):
 
 ```bash
-claude mcp add gcp-sh \
+claude mcp add gcp-x402 \
   --env PROXY_URL=https://gcp-x402.vercel.app \
   --env MAX_PAYMENT_USD=1.00 \
   -- npx -y github:nalin/gcp-x402
@@ -122,7 +122,7 @@ claude mcp add gcp-sh \
 ```json
 {
   "mcpServers": {
-    "gcp-sh": {
+    "gcp-x402": {
       "command": "npx",
       "args": ["-y", "github:nalin/gcp-x402"],
       "env": {
@@ -135,13 +135,13 @@ claude mcp add gcp-sh \
 ```
 
 The client **generates its own wallet on first run, per project** (saved to
-`./.gcp-sh/wallet.json` in the project, `chmod 600`, auto-`.gitignore`d) — no key to
+`./.gcp-x402/wallet.json` in the project, `chmod 600`, auto-`.gitignore`d) — no key to
 paste. On startup it prints the new address; the user just sends Base USDC to it. The
 agent can show the address + balance anytime via the `wallet_info` tool. Each project
 gets its own wallet, so a fresh project = a fresh first-run/funding flow.
 
 To share one wallet across projects, set `WALLET_FILE` to an absolute path (e.g.
-`~/.gcp-sh/wallet.json`). To bring your own key, set `WALLET_PRIVATE_KEY`.
+`~/.gcp-x402/wallet.json`). To bring your own key, set `WALLET_PRIVATE_KEY`.
 
 ### Tools the agent gets
 
@@ -158,7 +158,7 @@ To share one wallet across projects, set `WALLET_FILE` to an absolute path (e.g.
 2. User (or agent via `wallet_info`) shows the address → user sends Base USDC.
 3. Agent calls `bigquery_query` → it auto-pays per query from that wallet.
 
-Each project has its own wallet (`./.gcp-sh/wallet.json`). The client refuses to
+Each project has its own wallet (`./.gcp-x402/wallet.json`). The client refuses to
 auto-pay more than `MAX_PAYMENT_USD` for any single query.
 
 ---

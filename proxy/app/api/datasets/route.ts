@@ -20,7 +20,7 @@ const POPULAR = [
 
 export function GET() {
   return NextResponse.json({
-    service: "gcp.sh",
+    service: "gcp-x402",
     allowedProjects: config.allowedProjects,
     network: config.network.id,
     asset: "USDC",

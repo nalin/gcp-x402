@@ -1,5 +1,5 @@
 {
-  "name": "gcp-sh-proxy",
+  "name": "gcp-x402-proxy",
   "version": "0.1.0",
   "private": true,
   "description": "x402 proxy for BigQuery public datasets",

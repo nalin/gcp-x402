@@ -43,7 +43,7 @@ is always on stdout; the warnings never mix into it.
 
 ## First use: fund the wallet
 
-The wallet is generated automatically and is **per project** (`./.gcp-sh/wallet.json`).
+The wallet is generated automatically and is **per project** (`./.gcp-x402/wallet.json`).
 A new wallet starts at **$0**, so before the first query:
 
 1. Run `wallet` to get the address and balance.

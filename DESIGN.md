@@ -1,4 +1,4 @@
-# gcp.sh — an x402 proxy for BigQuery public datasets
+# gcp-x402 — an x402 proxy for BigQuery public datasets
 
 > Query BigQuery public datasets from an agent that has **no Google Cloud account** —
 > by paying per query in USDC over the [x402](https://x402.org) standard.
@@ -11,7 +11,7 @@ store, but BigQuery bills *query compute* (~$6.25 / TiB scanned, US on-demand) t
 whichever project runs the job. An autonomous agent has no GCP project, no billing
 account, and no way to get one without a human + a credit card.
 
-`gcp.sh` removes that prerequisite. It is a **metered reseller of BigQuery compute**:
+`gcp-x402` removes that prerequisite. It is a **metered reseller of BigQuery compute**:
 the proxy owns the GCP billing account, runs the agent's query, and charges the agent
 in USDC for exactly what the query cost (plus margin), settled onchain via x402.
 
@@ -33,9 +33,9 @@ So the dry run is simultaneously our **pricing oracle** and our **safety oracle*
 
 ```
 ┌─────────────────────────┐         x402 (HTTP 402 + USDC on Base)        ┌──────────────────────────┐
-│  Agent                  │ ───────────────────────────────────────────► │  gcp.sh proxy (Vercel)   │
+│  Agent                  │ ───────────────────────────────────────────► │  gcp-x402 proxy (Vercel)   │
 │  ┌───────────────────┐  │   POST /api/query  { sql }                    │                          │
-│  │ gcp.sh MCP client │  │ ◄─── 402 + signed quote (bytes, price, exp) ─ │  1. dry-run  → bytes      │
+│  │ gcp-x402 MCP client │  │ ◄─── 402 + signed quote (bytes, price, exp) ─ │  1. dry-run  → bytes      │
 │  │  • viem wallet    │  │                                               │  2. allowlist tables      │
 │  │  • x402-fetch     │  │   POST /api/query  + X-PAYMENT (EIP-3009)      │  3. price  = f(bytes)     │
 │  └───────────────────┘  │ ───────────────────────────────────────────► │  4. verify payment        │

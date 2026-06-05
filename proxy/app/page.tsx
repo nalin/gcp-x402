@@ -11,7 +11,7 @@ export default function Home() {
         color: "#1a1a1a",
       }}
     >
-      <h1 style={{ fontSize: "1.8rem", marginBottom: 0 }}>gcp.sh</h1>
+      <h1 style={{ fontSize: "1.8rem", marginBottom: 0 }}>gcp-x402</h1>
       <p style={{ color: "#555", marginTop: ".25rem" }}>
         An <strong>x402</strong> proxy for BigQuery public datasets. Query them
         from an agent with no Google Cloud account — pay per query in USDC.

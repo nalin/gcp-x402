@@ -1,7 +1,7 @@
 // Wallet lifecycle: generate-on-first-run, persist locally, load thereafter.
 //
 // The agent's wallet is created automatically the first time the MCP server
-// starts. The private key is written to a 0600 file in a per-project `.gcp-sh`
+// starts. The private key is written to a 0600 file in a per-project `.gcp-x402`
 // directory so it survives restarts; the user just funds the printed address
 // with Base USDC. A pasted WALLET_PRIVATE_KEY env var overrides this.
 
@@ -46,7 +46,7 @@ export function getAccount(): PrivateKeyAccount {
     address: account.address,
     privateKey,
     createdAt: new Date().toISOString(),
-    note: "gcp.sh agent wallet. Keep this file secret. Fund the address with USDC on Base.",
+    note: "gcp-x402 agent wallet. Keep this file secret. Fund the address with USDC on Base.",
   };
   const dir = dirname(config.walletFile);
   mkdirSync(dir, { recursive: true });

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>gcp.sh — how it works</title>
+<title>gcp-x402 — how it works</title>
 <meta name="description" content="An x402 proxy that lets AI agents query BigQuery public datasets without a Google Cloud account, paying per query in USDC. Architecture and design, explained." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -207,7 +207,7 @@
     <div class="hero" id="overview">
       <span class="kicker">x402 · BigQuery · USDC</span>
       <h1>Public data, no account required.</h1>
-      <p class="lede"><strong>gcp.sh</strong> lets an AI agent query Google BigQuery's
+      <p class="lede"><strong>gcp-x402</strong> lets an AI agent query Google BigQuery's
         public datasets <strong>without a Google Cloud account</strong> — paying a few
         thousandths of a dollar per query, automatically, in stablecoin.</p>
     </div>
@@ -221,7 +221,7 @@
 
       <div class="note green">
         <div class="note-h">The whole thing in one sentence</div>
-        gcp.sh is a toll booth in front of BigQuery: the agent sends a question, gets back an
+        gcp-x402 is a toll booth in front of BigQuery: the agent sends a question, gets back an
         exact price, pays it in USDC over a web standard called <a href="#payment">x402</a>,
         and gets its rows — while a hosted proxy quietly owns the Google Cloud bill and pockets
         a small margin.
@@ -232,7 +232,7 @@
         Imagine a library with priceless books that are free to read, but the reading room
         charges by the page you actually turn. You don't need a membership card — you drop a
         coin in the slot for exactly the pages you read, and a clerk (the proxy) settles up
-        with the library on your behalf. gcp.sh is that coin slot, for data.
+        with the library on your behalf. gcp-x402 is that coin slot, for data.
       </div>
       <p class="hint">Tip: most sections below have a “Deep dive” you can expand, and the
         boxes in the architecture diagram are clickable.</p>
@@ -241,7 +241,7 @@
     <!-- ========================= CORE IDEA ========================= -->
     <section id="idea">
       <h2>The core idea</h2>
-      <p class="sec-intro">Almost every paywall charges a <em>fixed</em> price. gcp.sh can't —
+      <p class="sec-intro">Almost every paywall charges a <em>fixed</em> price. gcp-x402 can't —
         the cost of a BigQuery query is unknowable until you look at it. So the price is
         computed <em>per query</em>, and that single fact shapes the entire design.</p>
 
@@ -308,7 +308,7 @@
           <!-- PROXY -->
           <a href="#flow" class="diagram-node">
             <rect class="box" x="340" y="60" width="270" height="310" rx="12"/>
-            <text class="ttl" x="360" y="86" fill="#44443f">gcp.sh proxy (Vercel)</text>
+            <text class="ttl" x="360" y="86" fill="#44443f">gcp-x402 proxy (Vercel)</text>
             <rect class="inner" x="360" y="98"  width="230" height="40" rx="7"/>
             <text class="lbl" x="372" y="123">1 · Dry-run → price</text>
             <rect class="inner" x="360" y="144" width="230" height="40" rx="7"/>
@@ -599,7 +599,7 @@ await bq.run(sql, { maximumBytesBilled: cap });   <span class="c">// fails free 
       <p class="sec-intro">On first use the client generates its own wallet — no keys to paste —
         and stores it <strong>per project</strong>.</p>
       <ul>
-        <li>Saved to <code>./.gcp-sh/wallet.json</code> in the project directory, with
+        <li>Saved to <code>./.gcp-x402/wallet.json</code> in the project directory, with
           <code>0600</code> permissions and an auto-written <code>.gitignore</code> so the private
           key can never be committed.</li>
         <li>Each project gets its own wallet, so a fresh project means a fresh fund-me flow — and
@@ -623,7 +623,7 @@ curl -fsSL https://raw.githubusercontent.com/nalin/gcp-x402/master/skill/bigquer
   -o .claude/skills/bigquery-public-data/SKILL.md</pre>
 
       <h3>As an MCP server</h3>
-<pre>claude mcp add gcp-sh \
+<pre>claude mcp add gcp-x402 \
   --env PROXY_URL=https://gcp-x402.vercel.app \
   -- npx -y github:nalin/gcp-x402</pre>
       <p class="small">Both point at the same hosted proxy and the same per-project wallet.</p>
@@ -666,7 +666,7 @@ curl -fsSL https://raw.githubusercontent.com/nalin/gcp-x402/master/skill/bigquer
     </section>
 
     <footer>
-      gcp.sh — an x402 proxy for BigQuery public datasets ·
+      gcp-x402 — an x402 proxy for BigQuery public datasets ·
       <a href="https://github.com/nalin/gcp-x402">github.com/nalin/gcp-x402</a><br/>
       This page is static and self-contained. Not affiliated with Google.
     </footer>

@@ -1,4 +1,4 @@
-// Centralized, validated configuration for the gcp.sh proxy.
+// Centralized, validated configuration for the gcp-x402 proxy.
 // Everything is read from environment variables so the same image runs on
 // testnet or mainnet with no code changes.
 

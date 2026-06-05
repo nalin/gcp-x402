@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// gcp.sh MCP server — lets an agent query BigQuery public datasets by paying
+// gcp-x402 MCP server — lets an agent query BigQuery public datasets by paying
 // per query in USDC over x402. The agent never needs a Google Cloud account.
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -11,7 +11,7 @@ import { config } from "./config.js";
 import { runCli } from "./cli.js";
 
 const server = new McpServer({
-  name: "gcp-sh",
+  name: "gcp-x402",
   version: "0.1.0",
 });
 
@@ -121,7 +121,7 @@ async function main() {
   }
 
   // Diagnostics go to stderr — stdout is the MCP transport.
-  console.error(`gcp.sh MCP server — wallet ${walletAddress}, proxy ${config.proxyUrl}`);
+  console.error(`gcp-x402 MCP server — wallet ${walletAddress}, proxy ${config.proxyUrl}`);
   if (freshlyCreated) {
     console.error(
       `\n  🪙  A new wallet was generated and saved to ${config.walletFile}.\n` +
