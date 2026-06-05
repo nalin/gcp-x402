@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>gcp.sh — how it works</title>
+<meta name="description" content="An x402 proxy that lets AI agents query BigQuery public datasets without a Google Cloud account, paying per query in USDC. Architecture and design, explained." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #f7f5ef;
+    --paper-2: #fffdf8;
+    --ink: #1b1b18;
+    --ink-soft: #44443f;
+    --muted: #76746c;
+    --line: #e2ded3;
+    --line-strong: #cdc8ba;
+    --green: #0f6e56;
+    --green-bg: #e2f3ec;
+    --amber: #9a5b12;
+    --amber-bg: #f7ecd6;
+    --blue: #1f5d86;
+    --blue-bg: #e2eef6;
+    --radius: 12px;
+    --maxw: 1180px;
+    --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --serif: "Fraunces", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, #ffffff 0%, rgba(255,255,255,0) 60%),
+      radial-gradient(900px 500px at -10% 10%, var(--green-bg) 0%, rgba(226,243,236,0) 55%);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, .mono { font-family: var(--mono); font-size: 0.9em; }
+  code { background: #efece3; padding: 0.12em 0.38em; border-radius: 5px; border: 1px solid var(--line); }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.12; letter-spacing: -0.01em; }
+
+  /* top bar */
+  header.topbar {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(8px);
+    background: rgba(247,245,239,0.82);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-inner {
+    max-width: var(--maxw); margin: 0 auto; padding: 12px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .brand { font-family: var(--mono); font-weight: 600; font-size: 18px; letter-spacing: -0.5px; }
+  .brand .dot { color: var(--green); }
+  .brand-sub { color: var(--muted); font-size: 13px; margin-left: 2px; }
+  .topbar nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; }
+  .topbar nav a { color: var(--ink-soft); }
+  .pill { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+          color: var(--green); background: var(--green-bg); border: 1px solid #bfe3d4;
+          padding: 3px 9px; border-radius: 999px; }
+
+  /* layout */
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+  .layout { display: grid; grid-template-columns: 232px 1fr; gap: 48px; align-items: start; }
+  aside.toc { position: sticky; top: 84px; align-self: start; padding-top: 40px; font-size: 14px; }
+  aside.toc .toc-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  aside.toc ol { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--line); }
+  aside.toc li a { display: block; padding: 5px 0 5px 14px; margin-left: -2px; border-left: 2px solid transparent; color: var(--ink-soft); }
+  aside.toc li a:hover { color: var(--ink); text-decoration: none; }
+  aside.toc li a.active { color: var(--green); border-left-color: var(--green); font-weight: 500; }
+  main { padding-bottom: 120px; min-width: 0; }
+
+  /* hero */
+  .hero { padding: 64px 0 36px; }
+  .hero h1 { font-size: clamp(38px, 6vw, 62px); margin: 14px 0 0; }
+  .hero .lede { font-size: clamp(18px, 2.4vw, 22px); color: var(--ink-soft); max-width: 40ch; margin: 20px 0 0; line-height: 1.5; }
+  .hero .lede strong { color: var(--ink); font-weight: 600; }
+  .kicker { font-family: var(--mono); font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--green); }
+
+  section { padding: 30px 0; border-top: 1px solid var(--line); scroll-margin-top: 84px; }
+  section > h2 { font-size: clamp(26px, 3.4vw, 34px); margin: 0 0 6px; }
+  section > .sec-intro { color: var(--ink-soft); max-width: 66ch; font-size: 17.5px; }
+  h3 { font-size: 20px; margin: 30px 0 8px; }
+  p { margin: 12px 0; max-width: 70ch; }
+  ul, ol.steps { max-width: 70ch; }
+  .small { font-size: 14px; color: var(--muted); }
+
+  /* analogy / callout cards */
+  .note { border: 1px solid var(--line-strong); background: var(--paper-2); border-radius: var(--radius); padding: 18px 20px; margin: 20px 0; }
+  .note.green { border-color: #bfe3d4; background: var(--green-bg); }
+  .note.amber { border-color: #ecd6a8; background: var(--amber-bg); }
+  .note .note-h { font-weight: 600; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+
+  /* deep-dive disclosures */
+  details.dd { border: 1px solid var(--line-strong); border-radius: var(--radius); margin: 14px 0; background: var(--paper-2); overflow: hidden; }
+  details.dd > summary {
+    cursor: pointer; padding: 14px 18px; list-style: none; display: flex; align-items: center; gap: 12px;
+    font-weight: 600; font-size: 16px;
+  }
+  details.dd > summary::-webkit-details-marker { display: none; }
+  details.dd > summary .chev { color: var(--green); font-family: var(--mono); transition: transform .2s ease; font-size: 14px; }
+  details.dd[open] > summary .chev { transform: rotate(90deg); }
+  details.dd > summary .tag { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  details.dd .dd-body { padding: 4px 18px 18px; border-top: 1px solid var(--line); }
+  details.dd .dd-body > :first-child { margin-top: 12px; }
+
+  /* code blocks */
+  pre { background: #1c1d1a; color: #e9e7df; border-radius: 10px; padding: 16px 18px; overflow-x: auto; font-family: var(--mono); font-size: 13.5px; line-height: 1.6; border: 1px solid #34352f; }
+  pre .c { color: #8a8d7f; }       /* comment */
+  pre .k { color: #7fd6b4; }       /* keyword/green */
+  pre .s { color: #e6c992; }       /* string/amber */
+  pre .n { color: #9fc7e6; }       /* number/blue */
+
+  /* tables */
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 15px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  td code { white-space: nowrap; }
+
+  /* diagram */
+  .figure { margin: 22px 0 8px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper-2); padding: 10px; }
+  .figure svg { width: 100%; height: auto; display: block; }
+  figcaption { color: var(--muted); font-size: 13.5px; margin: 8px 4px 0; }
+  .diagram-node { cursor: pointer; }
+  .diagram-node:hover rect { filter: brightness(0.97); }
+  .hint { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  /* flow steps */
+  ol.flow { list-style: none; counter-reset: f; padding: 0; margin: 20px 0; max-width: none; }
+  ol.flow > li { counter-increment: f; position: relative; padding: 0 0 22px 52px; }
+  ol.flow > li::before {
+    content: counter(f); position: absolute; left: 0; top: 0;
+    width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--mono); font-weight: 600; font-size: 15px; color: #fff; background: var(--green);
+  }
+  ol.flow > li.pay::before { background: var(--amber); }
+  ol.flow > li::after { content: ""; position: absolute; left: 16px; top: 38px; bottom: 0; width: 2px; background: var(--line-strong); }
+  ol.flow > li:last-child::after { display: none; }
+  ol.flow .st { font-weight: 600; }
+  ol.flow .meta { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 16px 18px; background: var(--paper-2); }
+  .card h4 { margin: 0 0 4px; font-size: 16px; font-family: var(--sans); font-weight: 600; }
+  .card .mono.lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; padding: 30px 0 80px; }
+
+  @media (max-width: 880px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    aside.toc { display: none; }
+    .topbar nav { display: none; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">gcp<span class="dot">.</span>sh <span class="brand-sub">/ how it works</span></span>
+    <nav>
+      <a href="#overview">Overview</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#flow">Query flow</a>
+      <a href="#components">Components</a>
+      <a href="https://github.com/nalin/gcp-x402">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="layout">
+
+  <aside class="toc">
+    <div class="toc-label">On this page</div>
+    <ol>
+      <li><a href="#overview">The one-minute version</a></li>
+      <li><a href="#idea">The core idea</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#flow">How a query works</a></li>
+      <li><a href="#pricing">The pricing oracle</a></li>
+      <li><a href="#payment">Paying with x402</a></li>
+      <li><a href="#security">Why it can't be gamed</a></li>
+      <li><a href="#economics">Economics</a></li>
+      <li><a href="#components">The three pieces</a></li>
+      <li><a href="#wallet">The agent wallet</a></li>
+      <li><a href="#install">Installing it</a></li>
+      <li><a href="#status">Status &amp; roadmap</a></li>
+      <li><a href="#glossary">Glossary</a></li>
+    </ol>
+  </aside>
+
+  <main>
+
+    <!-- ========================= HERO ========================= -->
+    <div class="hero" id="overview">
+      <span class="kicker">x402 · BigQuery · USDC</span>
+      <h1>Public data, no account required.</h1>
+      <p class="lede"><strong>gcp.sh</strong> lets an AI agent query Google BigQuery's
+        public datasets <strong>without a Google Cloud account</strong> — paying a few
+        thousandths of a dollar per query, automatically, in stablecoin.</p>
+    </div>
+
+    <section style="border-top:none; padding-top:8px">
+      <p class="sec-intro">BigQuery hosts ~200 free public datasets — census records, every
+        Hacker News post, the Ethereum blockchain, decades of weather. The <em>data</em> is
+        free, but running a query isn't: Google bills the <em>compute</em> (about $6.25 per
+        terabyte scanned) to whoever's project runs the job. To get such a project you need a
+        billing account and a credit card. An autonomous agent has neither.</p>
+
+      <div class="note green">
+        <div class="note-h">The whole thing in one sentence</div>
+        gcp.sh is a toll booth in front of BigQuery: the agent sends a question, gets back an
+        exact price, pays it in USDC over a web standard called <a href="#payment">x402</a>,
+        and gets its rows — while a hosted proxy quietly owns the Google Cloud bill and pockets
+        a small margin.
+      </div>
+
+      <div class="note">
+        <div class="note-h">A plain analogy</div>
+        Imagine a library with priceless books that are free to read, but the reading room
+        charges by the page you actually turn. You don't need a membership card — you drop a
+        coin in the slot for exactly the pages you read, and a clerk (the proxy) settles up
+        with the library on your behalf. gcp.sh is that coin slot, for data.
+      </div>
+      <p class="hint">Tip: most sections below have a “Deep dive” you can expand, and the
+        boxes in the architecture diagram are clickable.</p>
+    </section>
+
+    <!-- ========================= CORE IDEA ========================= -->
+    <section id="idea">
+      <h2>The core idea</h2>
+      <p class="sec-intro">Almost every paywall charges a <em>fixed</em> price. gcp.sh can't —
+        the cost of a BigQuery query is unknowable until you look at it. So the price is
+        computed <em>per query</em>, and that single fact shapes the entire design.</p>
+
+      <p>BigQuery offers a <strong>dry run</strong>: ask it to analyze a query without running
+        it, and it returns the <em>exact number of bytes</em> the real query would be billed
+        for — for free, in well under a second. That dry run is the keystone. It does two jobs
+        at once:</p>
+      <div class="grid2">
+        <div class="card">
+          <div class="mono lbl">Job 1 — pricing oracle</div>
+          <h4>How much will this cost?</h4>
+          <p style="margin:6px 0 0">Bytes scanned → dollars → a USDC price, quoted before the
+            agent pays a cent. <a href="#pricing">See pricing →</a></p>
+        </div>
+        <div class="card">
+          <div class="mono lbl">Job 2 — safety oracle</div>
+          <h4>Is this query allowed?</h4>
+          <p style="margin:6px 0 0">The dry run also lists every table the query touches, so the
+            proxy can reject anything that isn't read-only public data. <a href="#security">See security →</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= ARCHITECTURE ========================= -->
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <p class="sec-intro">Three actors. The agent holds a wallet and asks questions; the proxy
+        prices, guards, runs, and charges; BigQuery does the compute. Payment settles on the
+        Base blockchain through a neutral “facilitator.”</p>
+
+      <figure class="figure">
+        <!-- Architecture diagram: clickable nodes jump to detail sections -->
+        <svg viewBox="0 0 920 430" role="img" aria-label="Architecture diagram">
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M1 1 L8 5 L1 9" fill="none" stroke="#76746c" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+            <style>
+              .lbl   { font: 600 14px "IBM Plex Sans", sans-serif; fill: #1b1b18; }
+              .sub   { font: 400 11.5px "IBM Plex Mono", monospace; fill: #76746c; }
+              .edge  { font: 500 11px "IBM Plex Mono", monospace; fill: #5a5950; }
+              .box   { fill: #fffdf8; stroke: #cdc8ba; stroke-width: 1; }
+              .boxG  { fill: #e2f3ec; stroke: #0f6e56; stroke-width: 1; }
+              .boxA  { fill: #f7ecd6; stroke: #9a5b12; stroke-width: 1; }
+              .boxB  { fill: #e2eef6; stroke: #1f5d86; stroke-width: 1; }
+              .inner { fill: #ffffff; stroke: #dcd8cc; stroke-width: 1; }
+              .ttl   { font: 600 11px "IBM Plex Mono", monospace; letter-spacing:.08em; text-transform: uppercase; }
+            </style>
+          </defs>
+
+          <!-- AGENT -->
+          <a href="#components" class="diagram-node">
+            <rect class="boxG" x="20" y="120" width="220" height="190" rx="12"/>
+            <text class="ttl" x="38" y="146" fill="#0f6e56">The agent side</text>
+            <rect class="inner" x="38" y="158" width="184" height="52" rx="8"/>
+            <text class="lbl" x="50" y="180">Skill / MCP client</text>
+            <text class="sub" x="50" y="197">estimate · query · wallet</text>
+            <rect class="inner" x="38" y="220" width="184" height="56" rx="8"/>
+            <text class="lbl" x="50" y="242">USDC wallet</text>
+            <text class="sub" x="50" y="259">per-project · auto-made</text>
+            <text class="sub" x="38" y="296">your laptop / CI / agent host</text>
+          </a>
+
+          <!-- PROXY -->
+          <a href="#flow" class="diagram-node">
+            <rect class="box" x="340" y="60" width="270" height="310" rx="12"/>
+            <text class="ttl" x="360" y="86" fill="#44443f">gcp.sh proxy (Vercel)</text>
+            <rect class="inner" x="360" y="98"  width="230" height="40" rx="7"/>
+            <text class="lbl" x="372" y="123">1 · Dry-run → price</text>
+            <rect class="inner" x="360" y="144" width="230" height="40" rx="7"/>
+            <text class="lbl" x="372" y="169">2 · Allowlist + read-only check</text>
+            <rect class="inner" x="360" y="190" width="230" height="40" rx="7"/>
+            <text class="lbl" x="372" y="215">3 · Verify payment</text>
+            <rect class="inner" x="360" y="236" width="230" height="40" rx="7"/>
+            <text class="lbl" x="372" y="261">4 · Run query (byte-capped)</text>
+            <rect class="inner" x="360" y="282" width="230" height="40" rx="7"/>
+            <text class="lbl" x="372" y="307">5 · Settle on success</text>
+            <text class="sub" x="360" y="345">holds GCP creds + receiving wallet</text>
+          </a>
+
+          <!-- BIGQUERY -->
+          <a href="#pricing" class="diagram-node">
+            <rect class="boxB" x="710" y="80" width="190" height="120" rx="12"/>
+            <text class="ttl" x="728" y="106" fill="#1f5d86">BigQuery</text>
+            <text class="lbl" x="728" y="132">bigquery-public-data</text>
+            <text class="sub" x="728" y="152">~200 public datasets</text>
+            <text class="sub" x="728" y="172">dry-run + real jobs</text>
+          </a>
+
+          <!-- FACILITATOR / BASE -->
+          <a href="#payment" class="diagram-node">
+            <rect class="boxA" x="710" y="250" width="190" height="120" rx="12"/>
+            <text class="ttl" x="728" y="276" fill="#9a5b12">Base + facilitator</text>
+            <text class="lbl" x="728" y="302">USDC settlement</text>
+            <text class="sub" x="728" y="322">verify / settle</text>
+            <text class="sub" x="728" y="342">moves the coins on-chain</text>
+          </a>
+
+          <!-- edges -->
+          <line x1="240" y1="200" x2="336" y2="200" stroke="#76746c" stroke-width="1.6" marker-end="url(#ah)"/>
+          <text class="edge" x="246" y="192">① question</text>
+          <text class="edge" x="246" y="225">② + payment</text>
+
+          <line x1="610" y1="150" x2="706" y2="140" stroke="#76746c" stroke-width="1.6" marker-end="url(#ah)" marker-start="url(#ah)"/>
+          <text class="edge" x="616" y="130">scan</text>
+
+          <line x1="610" y1="300" x2="706" y2="305" stroke="#76746c" stroke-width="1.6" marker-end="url(#ah)"/>
+          <text class="edge" x="612" y="293">settle</text>
+        </svg>
+        <figcaption>The agent never talks to Google or the blockchain directly — only to the
+          proxy, over plain HTTP. Click any box to jump to its details.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ========================= QUERY FLOW ========================= -->
+    <section id="flow">
+      <h2>How a query works</h2>
+      <p class="sec-intro">A single endpoint, <code>POST /api/query</code>, drives a two-step
+        handshake defined by the x402 standard. The first call comes back with a price; the
+        second call carries the payment.</p>
+
+      <ol class="flow">
+        <li>
+          <div class="st">Agent sends the query — no payment yet.</div>
+          <div class="meta">POST /api/query  { sql }</div>
+        </li>
+        <li>
+          <div class="st">Proxy dry-runs it to learn the exact bytes and tables.</div>
+          <div class="meta">BigQuery → 110,355,534 bytes · referencedTables[]</div>
+        </li>
+        <li>
+          <div class="st">Proxy checks safety, prices it, and replies “402 Payment Required”.</div>
+          <div class="meta">402 + signed quote { bytes, price, expiry }</div>
+        </li>
+        <li class="pay">
+          <div class="st">The agent's wallet signs a USDC payment for that price and retries.</div>
+          <div class="meta">POST /api/query  { sql } + X-PAYMENT (signed authorization)</div>
+        </li>
+        <li class="pay">
+          <div class="st">Proxy re-checks the price, verifies the payment, runs the real query.</div>
+          <div class="meta">maximum_bytes_billed = quote  → a runaway query fails free</div>
+        </li>
+        <li class="pay">
+          <div class="st">Only after the query succeeds, the payment is settled on-chain. Rows are returned.</div>
+          <div class="meta">200 OK + rows + settlement receipt</div>
+        </li>
+      </ol>
+
+      <div class="note">
+        <div class="note-h">Why two calls?</div>
+        That's just how x402 works: the server quotes a price with a <code>402</code> status, and
+        the client pays and retries. It means the agent always sees the price <em>before</em>
+        spending anything, and a query that fails is never charged.
+      </div>
+
+      <details class="dd">
+        <summary><span class="chev">▸</span> Deep dive: the exact server logic <span class="tag">code</span></summary>
+        <div class="dd-body">
+          <p>The interesting part is what no off-the-shelf payment middleware does: pricing each
+            request from a dry run, and binding the payment to the specific query.</p>
+<pre><span class="c">// 1. QUOTE — price the query from a free dry run</span>
+const dry   = await bq.dryRun(sql);
+const bytes = dry.totalBytesProcessed;
+const refs  = dry.referencedTables;
+
+<span class="c">// 2. SAFETY — public, read-only tables only</span>
+for (const t of refs)
+  if (t.projectId !== <span class="s">"bigquery-public-data"</span>) reject();
+
+<span class="c">// 3. PRICE — cost × margin, with a floor (USDC)</span>
+const price = Math.max(billableBytes * USD_PER_BYTE * MARKUP, FLOOR);
+
+<span class="c">// 4. No payment yet? Answer 402 with the price + a signed quote.</span>
+<span class="c">// 5. On the paid retry: re-price from the ACTUAL body, verify the</span>
+<span class="c">//    payment covers it, run with a hard byte cap, THEN settle.</span>
+await bq.run(sql, { maximumBytesBilled: cap });   <span class="c">// fails free if over</span></pre>
+          <p class="small">Ordering is deliberate — <strong>verify → execute → settle</strong>.
+          Verification is cheap and happens before any BigQuery compute is spent; settlement
+          (the actual movement of funds) happens last, only if the query succeeded.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ========================= PRICING ========================= -->
+    <section id="pricing">
+      <h2>The pricing oracle</h2>
+      <p class="sec-intro">BigQuery's dry run returns the precise byte count the real query will
+        be billed for. The proxy turns that number into a price.</p>
+
+      <table>
+        <tr><th>Input</th><th>Value</th><th>Meaning</th></tr>
+        <tr><td>Bytes scanned</td><td><code>from dry run</code></td><td>Exact billable bytes — deterministic for static public tables.</td></tr>
+        <tr><td>Rate</td><td><code>~$6.25 / TiB</code></td><td>BigQuery's US on-demand price — what Google charges the proxy.</td></tr>
+        <tr><td>Markup</td><td><code>2×</code></td><td>The proxy's margin.</td></tr>
+        <tr><td>Floor</td><td><code>$0.002</code></td><td>Minimum, so tiny queries still clear payment overhead.</td></tr>
+        <tr><td>Per-table min</td><td><code>10 MB</code></td><td>Matches BigQuery's own minimum billing per referenced table.</td></tr>
+      </table>
+      <p>So a query that scans 1 GiB costs the agent about <strong>$0.012</strong>; a 100 MB query
+        hits the floor at <strong>$0.002</strong>. The price is quoted up front, every time.</p>
+
+      <details class="dd">
+        <summary><span class="chev">▸</span> Deep dive: the “LIMIT doesn't help” gotcha <span class="tag">cost model</span></summary>
+        <div class="dd-body">
+          <p>BigQuery is <em>columnar</em>: it bills for the columns a query reads across all rows,
+          not the rows it returns. Two consequences the agent is taught to respect:</p>
+          <ul>
+            <li><strong>Never <code>SELECT *</code></strong> on a wide table — it scans every column
+              and can cost 100× more than selecting one.</li>
+            <li><strong><code>LIMIT</code> does not reduce cost</strong> — it caps rows returned, not
+              bytes scanned. To scan less, filter on a partition column or select fewer columns.</li>
+          </ul>
+          <p>There's also a hard ceiling, <code>MAX_BYTES_PER_QUERY</code> (set to 1&nbsp;GiB on the
+          live deployment), so no single query — by the agent or anyone — can scan a giant table.
+          A 3.4&nbsp;TB <code>SELECT *</code> is rejected at the dry-run stage, before any scan.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ========================= PAYMENT ========================= -->
+    <section id="payment">
+      <h2>Paying with x402</h2>
+      <p class="sec-intro">x402 revives the long-dormant HTTP status code <code>402 Payment
+        Required</code> as a real payment protocol for machines. No accounts, no API keys — just
+        a wallet and an HTTP retry.</p>
+
+      <p>When the proxy answers <code>402</code>, it includes <em>payment requirements</em>: the
+        amount, the token (USDC), the network (Base), and where to send it. The agent's client
+        signs an <strong>EIP-3009 “transfer with authorization”</strong> — a gasless way to
+        authorize a USDC transfer — and retries the request with that signature in an
+        <code>X-PAYMENT</code> header. A neutral <strong>facilitator</strong> service verifies the
+        signature and broadcasts the settlement on-chain.</p>
+
+      <div class="note amber">
+        <div class="note-h">Gasless for the agent</div>
+        The agent's wallet only needs USDC — no ETH for gas. The facilitator submits the on-chain
+        transaction, so funding a new wallet is a single step.
+      </div>
+
+      <details class="dd">
+        <summary><span class="chev">▸</span> Deep dive: <code>exact</code> today, <code>upto</code> tomorrow <span class="tag">protocol</span></summary>
+        <div class="dd-body">
+          <p>The proxy ships the <code>exact</code> scheme: the agent pays exactly the quoted
+          price. It's supported by every facilitator and is correct for immutable public datasets,
+          where the dry-run byte count equals the billed byte count.</p>
+          <p>x402 v2 added an <code>upto</code> scheme — authorize a maximum, then settle the
+          <em>actual</em> cost after the work runs. That's a perfect future fit for metered compute
+          (a BigQuery cache hit bills ~0 bytes), and the code is structured so swapping it in is a
+          localized change.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ========================= SECURITY ========================= -->
+    <section id="security">
+      <h2>Why it can't be gamed</h2>
+      <p class="sec-intro">The attack to worry about: get a cheap quote on a tiny query, then swap
+        in a petabyte <code>SELECT *</code> on the paid retry. Three independent layers stop it.</p>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="mono lbl">Layer 1 — authoritative</div>
+          <h4>Re-price on the paid call</h4>
+          <p style="margin:6px 0 0">The proxy never trusts the first quote. It re-runs the dry run
+            on the actual body it's about to execute. If the query grew, the new price no longer
+            matches the authorized amount, and verification fails.</p>
+        </div>
+        <div class="card">
+          <div class="mono lbl">Layer 2 — tamper-evident</div>
+          <h4>Signed quote</h4>
+          <p style="margin:6px 0 0">A short-lived quote, signed by the server, binds a price to a
+            hash of the exact SQL. The agent's receipt — and a cheap tripwire if the body changed.</p>
+        </div>
+        <div class="card">
+          <div class="mono lbl">Layer 3 — backstop</div>
+          <h4>Hard byte cap</h4>
+          <p style="margin:6px 0 0">The real query runs with <code>maximum_bytes_billed</code> set
+            to the quote. A query that would exceed it <em>fails for free</em> instead of billing
+            the proxy.</p>
+        </div>
+        <div class="card">
+          <div class="mono lbl">Plus — sandboxing</div>
+          <h4>Read-only, public-only</h4>
+          <p style="margin:6px 0 0">DML/DDL/scripting are rejected; only <code>bigquery-public-data</code>
+            tables pass the allowlist. The service account can do nothing but run query jobs.</p>
+        </div>
+      </div>
+
+      <details class="dd">
+        <summary><span class="chev">▸</span> Deep dive: a small headroom on the byte cap <span class="tag">gotcha</span></summary>
+        <div class="dd-body">
+          <p>In live testing, a query priced at 110,355,534 bytes actually <em>billed</em>
+          111,149,056 — BigQuery rounds billed bytes up slightly past the dry-run estimate. An exact
+          cap spuriously killed such jobs. The fix: a small buffer (default 20%) on the cap. The
+          agent is still charged the quoted price; the proxy absorbs the sub-percent overage, which
+          the 2× markup more than covers. The 1&nbsp;GiB hard ceiling remains the real runaway guard.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ========================= ECONOMICS ========================= -->
+    <section id="economics">
+      <h2>Economics</h2>
+      <p class="sec-intro">The proxy is a reseller: it pays Google for bytes scanned and charges the
+        agent that cost plus a margin.</p>
+      <table>
+        <tr><th>Query size</th><th>Proxy's BigQuery cost</th><th>Agent pays (2× + floor)</th></tr>
+        <tr><td>100 MB</td><td>~$0.0006</td><td>$0.002 (floor)</td></tr>
+        <tr><td>1 GB</td><td>~$0.006</td><td>~$0.012</td></tr>
+        <tr><td>100 GB</td><td>~$0.61</td><td>~$1.22</td></tr>
+      </table>
+      <p>BigQuery's first 1 TiB/month is free <em>per billing account</em> — a busy proxy burns
+        that in days, so pricing is set at the marginal rate and the free terabyte is treated as
+        upside. The floor exists because on-chain settlement has a small per-transaction overhead;
+        a sub-cent floor keeps tiny queries from running at a loss.</p>
+    </section>
+
+    <!-- ========================= COMPONENTS ========================= -->
+    <section id="components">
+      <h2>The three pieces</h2>
+      <p class="sec-intro">One repository, three artifacts. The proxy is the backend; the client
+        ships in two forms so any agent can use it.</p>
+
+      <h3>1 · The proxy <span class="small">(server — Next.js on Vercel)</span></h3>
+      <p>Holds the Google Cloud credentials and the receiving wallet. Exposes
+        <code>POST /api/query</code> (the paid endpoint) and a free <code>GET /api/datasets</code>.
+        This is the only component that touches BigQuery or the blockchain.</p>
+
+      <h3>2 · The client <span class="small">(a dual-mode program)</span></h3>
+      <p>The same small program runs two ways from one install:</p>
+      <div class="grid2">
+        <div class="card">
+          <div class="mono lbl">no arguments</div>
+          <h4>MCP server</h4>
+          <p style="margin:6px 0 0">Exposes structured tools (<code>bigquery_query</code>,
+            <code>bigquery_estimate</code>, <code>wallet_info</code>…) to MCP-native clients.</p>
+        </div>
+        <div class="card">
+          <div class="mono lbl">with arguments</div>
+          <h4>Plain CLI</h4>
+          <p style="margin:6px 0 0">The skill drives it over the shell:
+            <code>npx -y github:nalin/gcp-x402 query "&lt;sql&gt;"</code> — no MCP setup needed.</p>
+        </div>
+      </div>
+
+      <h3>3 · The skill <span class="small">(context for the agent)</span></h3>
+      <p>A single Markdown file that teaches an agent <em>how</em> to use the tool well — the
+        funding flow, the cost rules (no <code>SELECT *</code>, <code>LIMIT</code> doesn't help),
+        read-only constraints, and worked examples. It triggers automatically when someone asks a
+        question a public dataset could answer.</p>
+    </section>
+
+    <!-- ========================= WALLET ========================= -->
+    <section id="wallet">
+      <h2>The agent wallet</h2>
+      <p class="sec-intro">On first use the client generates its own wallet — no keys to paste —
+        and stores it <strong>per project</strong>.</p>
+      <ul>
+        <li>Saved to <code>./.gcp-sh/wallet.json</code> in the project directory, with
+          <code>0600</code> permissions and an auto-written <code>.gitignore</code> so the private
+          key can never be committed.</li>
+        <li>Each project gets its own wallet, so a fresh project means a fresh fund-me flow — and
+          spending is isolated between projects.</li>
+        <li>A new wallet starts empty; the agent shows its address and asks the user to send a
+          little USDC on Base. After that, queries pay themselves.</li>
+        <li>A configurable ceiling (<code>MAX_PAYMENT_USD</code>, default $1) caps what any single
+          query may auto-pay.</li>
+      </ul>
+    </section>
+
+    <!-- ========================= INSTALL ========================= -->
+    <section id="install">
+      <h2>Installing it</h2>
+      <p class="sec-intro">The package is public, so installs need no auth, no clone, no build step.</p>
+
+      <h3>As a skill (simplest, per project)</h3>
+<pre><span class="c"># run from the project you want to enable</span>
+mkdir -p .claude/skills/bigquery-public-data &amp;&amp; \
+curl -fsSL https://raw.githubusercontent.com/nalin/gcp-x402/master/skill/bigquery-public-data/SKILL.md \
+  -o .claude/skills/bigquery-public-data/SKILL.md</pre>
+
+      <h3>As an MCP server</h3>
+<pre>claude mcp add gcp-sh \
+  --env PROXY_URL=https://gcp-x402.vercel.app \
+  -- npx -y github:nalin/gcp-x402</pre>
+      <p class="small">Both point at the same hosted proxy and the same per-project wallet.</p>
+    </section>
+
+    <!-- ========================= STATUS ========================= -->
+    <section id="status">
+      <h2>Status &amp; roadmap</h2>
+      <ul>
+        <li><strong>Live on testnet.</strong> End-to-end verified on Base Sepolia: a real query
+          returned rows, paid $0.002, and settled on-chain — with no charge when a query fails.</li>
+        <li><strong>Next:</strong> the <code>upto</code> scheme (charge actual billed bytes, so
+          cache hits cost ~nothing), a settlement retry for transient facilitator hiccups, and
+          large-result delivery via signed file export.</li>
+        <li><strong>Mainnet</strong> is a config flip (<code>X402_NETWORK=base</code> + a mainnet
+          facilitator) once the above are in.</li>
+      </ul>
+      <div class="note">
+        <div class="note-h">A note on terms</div>
+        Reselling BigQuery compute may touch Google Cloud's terms and individual dataset licenses —
+        worth a read before pointing real money at it. (Notably, Google itself is a premier member
+        of the x402 Foundation.)
+      </div>
+    </section>
+
+    <!-- ========================= GLOSSARY ========================= -->
+    <section id="glossary">
+      <h2>Glossary</h2>
+      <table>
+        <tr><th>Term</th><th>Plain meaning</th></tr>
+        <tr><td><strong>x402</strong></td><td>A standard that uses the HTTP “402 Payment Required” response to let software pay for a request and retry — no accounts.</td></tr>
+        <tr><td><strong>USDC</strong></td><td>A US-dollar stablecoin. $1 of USDC ≈ $1.</td></tr>
+        <tr><td><strong>Base</strong></td><td>A low-fee Ethereum-compatible blockchain where the USDC payments settle.</td></tr>
+        <tr><td><strong>Dry run</strong></td><td>Asking BigQuery to analyze a query without running it — returns exact bytes and tables, for free.</td></tr>
+        <tr><td><strong>EIP-3009</strong></td><td>A way to authorize a USDC transfer with a signature, so someone else can submit it and pay the gas.</td></tr>
+        <tr><td><strong>Facilitator</strong></td><td>A neutral service that checks the payment signature and pushes it on-chain.</td></tr>
+        <tr><td><strong>MCP</strong></td><td>Model Context Protocol — a standard way to give an AI agent tools.</td></tr>
+        <tr><td><strong>Skill</strong></td><td>A document that teaches an agent how and when to use a capability.</td></tr>
+      </table>
+    </section>
+
+    <footer>
+      gcp.sh — an x402 proxy for BigQuery public datasets ·
+      <a href="https://github.com/nalin/gcp-x402">github.com/nalin/gcp-x402</a><br/>
+      This page is static and self-contained. Not affiliated with Google.
+    </footer>
+
+  </main>
+</div>
+</div>
+
+<script>
+  // Open a deep-dive (or section) when its diagram box / link targets it.
+  function openTarget(hash) {
+    if (!hash) return;
+    const el = document.querySelector(hash);
+    if (!el) return;
+    const det = el.querySelector('details.dd');
+    if (det) det.open = true;
+  }
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', () => openTarget(a.getAttribute('href')));
+  });
+
+  // Highlight the current section in the table of contents while scrolling.
+  const links = [...document.querySelectorAll('aside.toc a')];
+  const byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const link = byId.get(e.target.id);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: "-20% 0px -70% 0px", threshold: 0 });
+  document.querySelectorAll('main section[id], #overview').forEach(s => obs.observe(s));
+</script>
+</body>
+</html>
