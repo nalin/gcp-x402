@@ -28,6 +28,10 @@ caches it; the very first call builds for ~60s, then it's fast):
 npx -y git+ssh://git@github.com/nalin/gcp-x402.git <command>
 ```
 
+The first build prints npm deprecation warnings to stderr — harmless. To keep
+output clean, prefix commands with `npm_config_loglevel=error`. The data you want
+is always on stdout; the warnings never mix into it.
+
 | Command | What it does |
 | --- | --- |
 | `wallet` | Show this project's wallet address, USDC balance, and how to fund it. |
