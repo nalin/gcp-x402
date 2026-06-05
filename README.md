@@ -57,14 +57,19 @@ curl -i -X POST http://localhost:3000/api/query \
   -d '{"sql":"SELECT name, number FROM `bigquery-public-data.usa_names.usa_1910_2013` WHERE state=\"CA\" ORDER BY number DESC LIMIT 10"}'
 ```
 
-### Deploy to Vercel
+### Deploy to Google Cloud Run
 
-Set the project's **Root Directory** to `proxy`, then add every variable from
-`proxy/.env.example` in the Vercel dashboard (Settings → Environment Variables).
-`GCP_SERVICE_ACCOUNT_JSON` should be the entire key file pasted as one value.
+The proxy ships as a container (`proxy/Dockerfile`, Next.js `output: "standalone"`) and
+runs on **Cloud Run**, where it authenticates to BigQuery via its **attached service
+account** — no `GCP_SERVICE_ACCOUNT_JSON` key to manage. Full runbook:
+[`proxy/DEPLOY.md`](proxy/DEPLOY.md). The short version:
 
 ```bash
-cd proxy && vercel --prod
+cd proxy
+gcloud run deploy gcp-x402 --source . --region us-central1 --allow-unauthenticated \
+  --service-account gcp-x402-run@gcp-x402.iam.gserviceaccount.com \
+  --set-secrets QUOTE_SECRET=gcp-x402-quote-secret:latest \
+  --set-env-vars '^|^X402_NETWORK=base-sepolia|PAY_TO_ADDRESS=0x...|GCP_PROJECT_ID=gcp-x402|FACILITATOR_URL=https://x402.org/facilitator|MAX_BYTES_PER_QUERY=1073741824'
 ```
 
 > **Money safety:** the default `X402_NETWORK=base-sepolia` settles on testnet. Nothing
