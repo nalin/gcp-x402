@@ -106,11 +106,14 @@ claude mcp add gcp-sh \
 
 > Once the repo is public, the shorthand `npx -y github:nalin/gcp-x402` works too.
 
-The client **generates its own wallet on first run** (saved to `~/.gcp-sh/wallet.json`,
-`chmod 600`) — no key to paste. On startup it prints the new address; the user just
-sends Base USDC to it. The agent can show the address + balance anytime via the
-`wallet_info` tool. To bring your own key instead, set `WALLET_PRIVATE_KEY` (and
-optionally `WALLET_FILE` to relocate the keystore).
+The client **generates its own wallet on first run, per project** (saved to
+`./.gcp-sh/wallet.json` in the project, `chmod 600`, auto-`.gitignore`d) — no key to
+paste. On startup it prints the new address; the user just sends Base USDC to it. The
+agent can show the address + balance anytime via the `wallet_info` tool. Each project
+gets its own wallet, so a fresh project = a fresh first-run/funding flow.
+
+To share one wallet across projects, set `WALLET_FILE` to an absolute path (e.g.
+`~/.gcp-sh/wallet.json`). To bring your own key, set `WALLET_PRIVATE_KEY`.
 
 ### Tools the agent gets
 
@@ -123,11 +126,12 @@ optionally `WALLET_FILE` to relocate the keystore).
 
 ### First-run UX
 
-1. User adds the MCP server → a wallet is generated, address printed.
+1. User adds the MCP server in a project → a project-local wallet is generated, address printed.
 2. User (or agent via `wallet_info`) shows the address → user sends Base USDC.
 3. Agent calls `bigquery_query` → it auto-pays per query from that wallet.
 
-The client refuses to auto-pay more than `MAX_PAYMENT_USD` for any single query.
+Each project has its own wallet (`./.gcp-sh/wallet.json`). The client refuses to
+auto-pay more than `MAX_PAYMENT_USD` for any single query.
 
 ---
 

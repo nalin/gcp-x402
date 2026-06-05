@@ -1,5 +1,17 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, isAbsolute } from "node:path";
+
+/**
+ * Resolve the keystore path. Defaults to a PER-PROJECT location:
+ * `.gcp-sh/wallet.json` under the directory the MCP server is launched in (the
+ * project root, for Claude Code), so each project gets its own wallet. A
+ * WALLET_FILE override may be absolute (e.g. a shared per-machine wallet) or
+ * relative (resolved against the working directory).
+ */
+function resolveWalletFile(): string {
+  const override = process.env.WALLET_FILE;
+  if (override) return isAbsolute(override) ? override : join(process.cwd(), override);
+  return join(process.cwd(), ".gcp-sh", "wallet.json");
+}
 
 export const config = {
   /** Base URL of the gcp.sh proxy, e.g. https://gcp.sh */
@@ -11,8 +23,8 @@ export const config = {
    */
   privateKeyEnv: process.env.WALLET_PRIVATE_KEY,
 
-  /** Where the auto-generated wallet is stored. */
-  walletFile: process.env.WALLET_FILE ?? join(homedir(), ".gcp-sh", "wallet.json"),
+  /** Where the auto-generated wallet is stored (per-project by default). */
+  walletFile: resolveWalletFile(),
 
   /** Hard ceiling on what a single query may auto-pay, in USD. */
   maxPaymentUsd: Number(process.env.MAX_PAYMENT_USD ?? "1.00"),

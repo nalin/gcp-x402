@@ -1,12 +1,12 @@
 // Wallet lifecycle: generate-on-first-run, persist locally, load thereafter.
 //
 // The agent's wallet is created automatically the first time the MCP server
-// starts. The private key is written to a 0600 file under ~/.gcp-sh so it
-// survives restarts; the user just funds the printed address with Base USDC.
-// A pasted WALLET_PRIVATE_KEY env var overrides this for power users / CI.
+// starts. The private key is written to a 0600 file in a per-project `.gcp-sh`
+// directory so it survives restarts; the user just funds the printed address
+// with Base USDC. A pasted WALLET_PRIVATE_KEY env var overrides this.
 
 import { mkdirSync, readFileSync, writeFileSync, existsSync, chmodSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { PrivateKeyAccount, Hex } from "viem";
 import { config } from "./config.js";
@@ -48,7 +48,15 @@ export function getAccount(): PrivateKeyAccount {
     createdAt: new Date().toISOString(),
     note: "gcp.sh agent wallet. Keep this file secret. Fund the address with USDC on Base.",
   };
-  mkdirSync(dirname(config.walletFile), { recursive: true });
+  const dir = dirname(config.walletFile);
+  mkdirSync(dir, { recursive: true });
+  // Safety net: a project-local keystore holds a private key — make sure it can
+  // never be accidentally committed, regardless of the project's own .gitignore.
+  try {
+    writeFileSync(join(dir, ".gitignore"), "*\n", { flag: "wx" });
+  } catch {
+    /* already exists / unwritable — fine */
+  }
   writeFileSync(config.walletFile, JSON.stringify(ks, null, 2), { mode: 0o600 });
   try {
     chmodSync(config.walletFile, 0o600);
