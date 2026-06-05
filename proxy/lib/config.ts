@@ -1,0 +1,77 @@
+// Centralized, validated configuration for the gcp.sh proxy.
+// Everything is read from environment variables so the same image runs on
+// testnet or mainnet with no code changes.
+
+import { base, baseSepolia } from "./networks";
+
+function req(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing required env var: ${name}`);
+  return v;
+}
+
+function num(name: string, fallback: number): number {
+  const v = process.env[name];
+  if (v === undefined) return fallback;
+  const n = Number(v);
+  if (!Number.isFinite(n)) throw new Error(`Env var ${name} must be a number, got "${v}"`);
+  return n;
+}
+
+const networkName = process.env.X402_NETWORK ?? "base-sepolia";
+const network = networkName === "base" ? base : baseSepolia;
+
+export const config = {
+  // --- BigQuery -------------------------------------------------------------
+  /** Billing project that runs the jobs (NOT the public-data project). */
+  gcpProjectId: req("GCP_PROJECT_ID"),
+  /**
+   * Service-account credentials as inline JSON (preferred on Vercel) — the
+   * @google-cloud/bigquery client also honors GOOGLE_APPLICATION_CREDENTIALS
+   * (a file path) when this is unset.
+   */
+  gcpCredentialsJson: process.env.GCP_SERVICE_ACCOUNT_JSON,
+  /** Only datasets under these GCP projects may be queried. */
+  allowedProjects: (process.env.ALLOWED_PROJECTS ?? "bigquery-public-data")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+  /** US on-demand location for jobs; public datasets live in the US multi-region. */
+  bqLocation: process.env.BQ_LOCATION ?? "US",
+  /** Hard wall: refuse to even price a query whose dry run exceeds this. */
+  maxBytesPerQuery: num("MAX_BYTES_PER_QUERY", 100 * 2 ** 40), // 100 TiB
+  /** Inline result row cap before we mark the response truncated. */
+  maxInlineRows: num("MAX_INLINE_ROWS", 10_000),
+  /** Per-query statement timeout (ms). */
+  queryTimeoutMs: num("QUERY_TIMEOUT_MS", 60_000),
+  /**
+   * Headroom on maximum_bytes_billed at execution time. The dry-run estimate
+   * and the actually-billed bytes can differ slightly (BigQuery rounds billed
+   * bytes up), so an exact cap spuriously fails real queries. We still charge
+   * the quoted price; this buffer just stops a benign rounding delta from
+   * killing the job. MAX_BYTES_PER_QUERY remains the real runaway guard.
+   */
+  byteCapBuffer: num("BYTE_CAP_BUFFER", 1.2),
+
+  // --- Pricing --------------------------------------------------------------
+  usdPerByte: num("USD_PER_BYTE", 6.25 / 2 ** 40), // ~$6.25 / TiB, US on-demand
+  markup: num("PRICE_MARKUP", 2.0),
+  priceFloorUsd: num("PRICE_FLOOR_USD", 0.002),
+  minBytesPerTable: num("MIN_BYTES_PER_TABLE", 10 * 10 ** 6), // BigQuery's 10 MB/table floor
+
+  // --- x402 / settlement ----------------------------------------------------
+  network,
+  /** Address that receives USDC for queries. */
+  payTo: req("PAY_TO_ADDRESS"),
+  /** Facilitator base URL exposing POST /verify and POST /settle. */
+  facilitatorUrl: (process.env.FACILITATOR_URL ?? "https://x402.org/facilitator").replace(/\/$/, ""),
+  /** Optional bearer for authenticated facilitators (e.g. CDP). */
+  facilitatorApiKey: process.env.FACILITATOR_API_KEY,
+  /** How long a quote/payment authorization stays valid. */
+  quoteTtlSeconds: num("QUOTE_TTL_SECONDS", 60),
+
+  // --- Quote signing --------------------------------------------------------
+  quoteSecret: req("QUOTE_SECRET"),
+} as const;
+
+export type AppConfig = typeof config;
