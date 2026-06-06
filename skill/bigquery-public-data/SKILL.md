@@ -75,15 +75,19 @@ Other requirements (enforced by the proxy):
 - **Fully qualify tables** as `` `bigquery-public-data.<dataset>.<table>` `` with
   backticks. Use **Standard SQL** (not Legacy).
 
+**Strict Anti-Hallucination Rules:**
+- **NEVER guess or hallucinate column names.** Before querying a table for the first time, you MUST run an `estimate` or `query` against the `INFORMATION_SCHEMA` to get the exact column names:
+  `SELECT column_name, data_type FROM \`bigquery-public-data.<dataset>.INFORMATION_SCHEMA.COLUMNS\` WHERE table_name = "<table>"`
+- **NEVER guess exact string values for filters** (e.g., event signatures, topics, names). If filtering by a specific text value, first run an exploratory query using `LIKE` with wildcards to find the exact format before aggregating. Example:
+  `SELECT DISTINCT event_signature FROM \`bigquery-public-data.<dataset>.<table>\` WHERE LOWER(event_signature) LIKE '%transfer%' LIMIT 10`
+
 **Always `estimate` first** for anything that might be large (any query over
 `github_repos`, `crypto_*`, `wikipedia`, or `SELECT *`). Show the user the price,
 and if it's more than a cent or two, confirm before running `query`.
 
 ## Typical workflow
 
-1. Identify the dataset/table (use `datasets`, or known `bigquery-public-data`
-   tables). If unsure of columns, a cheap way to see schema is to `estimate` a
-   tiny `SELECT col, ... LIMIT 1` and iterate, or check the dataset's known schema.
+1. Identify and Verify: Identify the dataset/table. You MUST query the `INFORMATION_SCHEMA.COLUMNS` to verify exact column names. If filtering by a specific text value (like a crypto event), run a small exploratory query with `LIKE` to find the exact string format.
 2. Draft a minimal-column, filtered query.
 3. `estimate` it → sanity-check the price.
 4. `query` it → returns rows as JSON. Summarize the answer for the user; mention
